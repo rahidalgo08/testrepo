@@ -1,0 +1,89 @@
+import pandas as pd
+import numpy as np
+
+# Cargando la data
+df=pd.read_csv("https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/IBM-DS0321EN-SkillsNetwork/datasets/dataset_part_1.csv")
+df.head(10)
+
+# Identificamos y calculamos el porcentaje de missing values en cada atributo
+df.isnull().sum()/len(df)*100
+
+# Identificamos que columnas son numéricas y categóricas
+df.dtypes
+
+
+
+### TASK 1: Calculate the number of launches on each site ###
+# Los datos contienen varias instalaciones de lanzamiento de Space X: Cape Canaveral Space 
+# Launch Complex 40 VAFB SLC 4E , Vandenberg Air Force Base Space Launch Complex 4E (SLC-4E),
+# Kennedy Space Center Launch Complex 39A KSC LC 39A .The location of each Launch Is placed in 
+# the column "LaunchSite".
+
+# A continuación, veamos la cantidad de lanzamientos de cada sitio.
+# Usamos "value_counts()" en la columna "LaunchSite" para determinar el número de aterrizajes en
+# cada sitio
+launch_counts = df['LaunchSite'].value_counts()
+print(launch_counts)
+# Contar el número de lanzamientos por cada sitio de lanzamiento
+
+
+
+### TASK 2: Calculate the number and occurrence of each orbit ###
+# Usa el método "value_counts()" para determinar el número y ocurrencias de cada órbita en la
+# columna "Orbit"
+orbit_counts = df['Orbit'].value_counts()
+print(orbit_counts)
+# Contar el número de ocurrencias de cada tipo de órbita
+
+
+
+### TASK 3: Calculate the number and occurence of mission outcome of the orbits ###
+# Usa el método "value_counts()" en la columna "Outcome" para determinar el número de 
+# "landing_outcomes". Luego, asígnalo a la variable "landing_outcomes".
+# landing_outcomes = values on Outcome column
+landing_outcomes = df['Outcome'].value_counts()
+print(landing_outcomes)
+# Contar el número de ocurrencias de cada resultado de misión
+
+
+
+# "True Ocean" significa que el resultado de la misión aterrizó con éxito en una región
+# específica del océano, mientras que "False Ocean" significa que el resultado de la misión 
+# aterrizó sin éxito en una región específica del océano. "True RTLS" significa que el 
+# resultado de la misión aterrizó con éxito en una plataforma terrestre. "False RTLS" significa
+# que el resultado de la misión aterrizó sin éxito en una plataforma terrestre. 
+# "True ADS" significa que el resultado de la misión se aterrizó con éxito en un barco no 
+# tripulado. "False ASDS" significa que el resultado de la misión se aterrizó sin éxito en un
+# barco no tripulado. ""None ADS" y "None None" estos representan un fracaso en el aterrizaje.
+for i,outcome in enumerate(landing_outcomes.keys()):
+    print(i,outcome)
+
+
+# Creamos un conjunto de resultados donde la segunda etapa no aterrizó con éxito
+bad_outcomes=set(landing_outcomes.keys()[[1,3,5,6,7]])
+bad_outcomes
+
+
+
+### TASK 4: Create a landing outcome label from Outcome column ###
+# Usando "Outcome", cree una lista donde el elemento sea cero si la fila correspondiente en
+# "Outcome" está en el conjunto "bad_outcome"; de lo contrario, es uno. Luego asígnalo a la
+# variable "landing_class"
+# landing_class = 0 if bad_outcome
+# landing_class = 1 otherwise
+
+# Crear la variable landing_class (0 si está en bad_outcomes, 1 en caso contrario)
+df["landing_class"] = df["Outcome"].apply(lambda x: 0 if x in bad_outcomes else 1)
+
+# Esta variable representará la variable de clasificación que representa el resultado de cada 
+# lanzamiento. Si el valor es cero, la primera etapa no aterrizó exitosamente; uno significa
+# que la primera etapa aterrizó con éxito
+df['Class']=df["landing_class"]
+df[['Class']].head(8)
+df.head(5)
+
+df["Class"].mean()
+
+
+# Lo guardamos en un archivo excel
+df.to_csv("dataset_part_2.csv", index=False)
