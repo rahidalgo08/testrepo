@@ -1,0 +1,161 @@
+## Descargando el dataset ##
+pip install sqlalchemy==1.3.9
+
+
+## Conectando al database ##
+pip install ipython-sql
+pip install ipython-sql prettytable
+
+%load_ext sql
+
+import csv, sqlite3
+import prettytable
+prettytable.DEFAULT = 'DEFAULT'
+
+con = sqlite3.connect("my_data1.db")
+cur = con.cursor()
+
+pip install -q pandas
+
+%sql sqlite:///my_data1.db
+
+import pandas as pd
+df = pd.read_csv("https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/IBM-DS0321EN-SkillsNetwork/labs/module_2/data/Spacex.csv")
+df.to_sql("SPACEXTBL", con, if_exists='replace', index=False,method="multi")
+
+
+## Nota: el siguiente código se agrega para eliminar filas en blanco de la tabla ##
+#DROP THE TABLE IF EXISTS
+%sql DROP TABLE IF EXISTS SPACEXTABLE;
+%sql create table SPACEXTABLE as select * from SPACEXTBL where Date is not null
+
+
+
+### TASK 1: Display the names of the unique launch sites in the space mission ###
+df["Launch_Site"].unique()
+
+
+
+### TASK 2: Display 5 records where launch sites begin with the string 'CCA' ###
+filtered_df = df[df["Launch_Site"].str.startswith("CCA")]
+print("\n🚀 **5 Registros donde Launch Site comienza con 'CCA':**")
+print(filtered_df.head(5))
+
+
+
+### TASK 3: Display the total payload mass carried by boosters launched by NASA (CRS) ###
+# Filtrar lanzamientos donde el booster fue operado por NASA (CRS)
+nasa_crs_launches = df[df["Booster_Version"].str.contains("NASA", na=False)]
+
+# Calcular la suma de Payload Mass para estos lanzamientos
+total_payload_mass = nasa_crs_launches["PAYLOAD_MASS__KG_"].sum()
+
+# Mostrar el resultado
+print(f"\n🚀 **Total Payload Mass carried by NASA (CRS) Boosters:** {total_payload_mass} kg")
+
+
+
+### TASK 4: Display average payload mass carried by booster version F9 v1.1 ###
+# Filtrar solo los lanzamientos con el booster "F9 v1.1"
+f9_v1_1_launches = df[df["Booster_Version"].str.contains("F9 v1.1", case=False, na=False)]
+
+# Calcular el promedio de carga útil
+average_payload_mass = f9_v1_1_launches["PAYLOAD_MASS__KG_"].mean()
+
+# Mostrar el resultado
+print(f"\n🚀 **Average Payload Mass for F9 v1.1:** {average_payload_mass:.2f} kg")
+
+
+
+### TASK 5: List the date when the first succesful landing outcome in ground ### 
+###   pad was acheived                                                        ###
+# Hint:Use min function
+
+# Filtrar solo los aterrizajes exitosos en "ground pad"
+successful_ground_landings = df[df["Landing_Outcome"].str.contains("ground pad", case=False, na=False)]
+
+# Encontrar la fecha más antigua (primer aterrizaje exitoso)
+first_successful_landing_date = successful_ground_landings["Date"].min()
+
+# Mostrar el resultado
+print(f"\n🚀 **First Successful Ground Pad Landing:** {first_successful_landing_date}")
+
+
+
+### TASK 6: List the names of the boosters which have success in drone ship and have ###
+###         payload mass greater than 4000 but less than 6000                        ###
+
+# Filtrar aterrizajes exitosos en "drone ship"
+successful_drone_landings = df[df["Landing_Outcome"].str.contains("drone ship", case=False, na=False)]
+
+# Filtrar por payload mass entre 4000 y 6000 kg
+filtered_boosters = successful_drone_landings[successful_drone_landings["PAYLOAD_MASS__KG_"].between(4000, 6000)]
+
+# Obtener los nombres de los boosters únicos
+booster_names = filtered_boosters["Booster_Version"].unique()
+
+# Mostrar el resultado
+print(f"\n🚀 **Boosters with successful drone ship landing and payload between 4000-6000 kg:**\n{booster_names}")
+
+
+
+### TASK 7: List the total number of successful and failure mission outcomes ###
+# Contar los valores únicos en la columna "Mission_Outcome"
+mission_counts = df["Mission_Outcome"].value_counts()
+
+# Mostrar el resultado
+print("\n🚀 **Total Successful and Failed Missions:**")
+print(mission_counts)
+
+
+
+### TASK 8: List the names of the booster_versions which have carried the maximum payload ###
+###         mass. Use a subquery                                                          ###
+# Encontrar la carga útil máxima
+max_payload = df["PAYLOAD_MASS__KG_"].max()
+
+# Filtrar los boosters que transportaron esa carga
+boosters_max_payload = df[df["PAYLOAD_MASS__KG_"] == max_payload]["Booster_Version"].unique()
+
+# Mostrar el resultado
+print(f"\n🚀 **Boosters that carried the maximum payload ({max_payload} kg):**\n{boosters_max_payload}")
+
+
+
+### TASK 9: List the records which will display the month names, failure landing_outcomes ###
+###         in drone ship ,booster versions, launch_site for the months in year 2015.     ###
+
+# Convertir la columna de fecha a formato datetime
+df["Date"] = pd.to_datetime(df["Date"])
+
+# Extraer el mes en formato de texto (ejemplo: "January", "February")
+df["Month"] = df["Date"].dt.strftime("%B")
+
+# Filtrar por el año 2015
+df_2015 = df[df["Date"].dt.year == 2015]
+
+# Filtrar aterrizajes fallidos en drone ship
+failed_drone_landings = df_2015[df_2015["Landing_Outcome"].str.contains("Failure", case=False, na=False) & 
+                                df_2015["Landing_Outcome"].str.contains("drone ship", case=False, na=False)]
+
+# Seleccionar columnas relevantes
+result = failed_drone_landings[["Month", "Landing_Outcome", "Booster_Version", "Launch_Site"]]
+
+# Mostrar el resultado
+print("\n🚀 **Failed Drone Ship Landings in 2015:**")
+print(result)
+
+
+
+### TASK 10: Rank the count of landing outcomes (such as Failure (drone ship) or Success ###
+### (ground pad)) between the date 2010-06-04 and 2017-03-20, in descending order        ###
+
+# Filtrar por el rango de fechas dado
+filtered_df = df[(df["Date"] >= "2010-06-04") & (df["Date"] <= "2017-03-20")]
+
+# Contar los diferentes resultados de aterrizaje
+landing_counts = filtered_df["Landing_Outcome"].value_counts()
+
+# Mostrar los resultados ordenados en orden descendente
+print("\n🚀 **Ranking de Resultados de Aterrizaje (2010-06-04 a 2017-03-20):**")
+print(landing_counts)
