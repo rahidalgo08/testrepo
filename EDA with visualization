@@ -1,0 +1,162 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+
+
+## Exploratory Data Analysis ##
+import requests
+import io
+
+URL = "https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/IBM-DS0321EN-SkillsNetwork/datasets/dataset_part_2.csv"
+
+# Descargar el archivo CSV
+response = requests.get(URL)
+response.raise_for_status()  # Lanza un error si la descarga falla
+
+# Leer el CSV en un DataFrame
+dataset_part_2_csv = io.StringIO(response.text)
+df = pd.read_csv(dataset_part_2_csv)
+
+# Mostrar las primeras 5 filas
+print(df.head(5))
+
+
+# Primero, intentemos ver cómo la "FlightNumber" (que indica los continuos intentos de 
+# lanzamiento) y "Payload" variables afectarían el resultado del lanzamiento.
+# Nosotros podemos trazar el "FlightNumber" vs "PayloadMass" y superponer el resultado del 
+# lanzamiento. Vemos que a medida que aumenta el número de vuelos, es más probable que la
+# primera etapa aterrice con éxito. La masa de la carga útil también parece ser un factor; 
+# Incluso con cargas útiles más masivas, la primera etapa a menudo regresa con éxito.
+sns.catplot(y="PayloadMass", x="FlightNumber", hue="Class", data=df, aspect = 5)
+plt.xlabel("Flight Number",fontsize=20)
+plt.ylabel("Pay load Mass (kg)",fontsize=20)
+plt.show()
+
+
+
+### TASK 1: Visualize the relationship between Flight Number and Launch Site ###
+# Use the function catplot to plot FlightNumber vs LaunchSite, set the parameter x parameter 
+# to FlightNumber,set the y to Launch Site and set the parameter hue to 'class'
+sns.catplot(x="FlightNumber", y="LaunchSite", hue="Class", data=df)
+plt.xlabel("Flight Number", fontsize=20)
+plt.ylabel("Launch Site", fontsize=20)
+plt.show()
+
+
+
+### TASK 2: Visualize the relationship between Payload Mass and Launch Site ###
+sns.catplot(y="LaunchSite",x="FlightNumber",hue="Class", data=df, aspect = 1)
+plt.ylabel("Launch Site",fontsize=15)
+plt.xlabel("Flight Number",fontsize=15)
+plt.show()
+
+
+
+
+
+
+
+### TASK 3: Visualize the relationship between success rate of each orbit type ###
+# Let's create a bar chart for the sucess rate of each orbit
+# HINT use groupby method on Orbit column and get the mean of Class column
+sucess_rate = df.groupby("Orbit")["Class"].mean().reset_index()
+
+sns.barplot(data=sucess_rate, x="Orbit", y="Class", palette="viridis")
+plt.xlabel("Orbit")
+plt.ylabel("Sucess Rate")
+plt.ylim(0,1)
+plt.xticks(rotation=45)
+plt.show()
+
+
+
+### TASK 4: Visualize the relationship between FlightNumber and Orbit type ###
+# For each orbit, we want to see if there is any relationship between FlightNumber and Orbit
+# type.
+sns.catplot(data=df, x="FlightNumber", y="Orbit", hue="Class")
+plt.xlabel("Flight Number")
+plt.ylabel("Orbit")
+plt.show()
+
+
+
+### TASK 5: Visualize the relationship between Payload Mass and Orbit type ###
+sns.catplot(data=df, x="PayloadMass", y="Orbit", hue="Class", kind="strip", height=5, aspect=2)
+plt.xlabel("Pay Load Mass")
+plt.ylabel("Orbit")
+plt.show()
+
+
+
+### TASK 6: Visualize the launch success yearly trend ###
+# You can plot a line chart with x axis to be Year and y axis to be average success rate, to
+# get the average launch success trend.
+
+# A function to Extract years from the date 
+year=[]
+def Extract_year():
+    for i in df["Date"]:
+        year.append(i.split("-")[0])
+    return year
+Extract_year()
+df['Date'] = year
+df.head()
+
+yearly_sucess = df.groupby("Date")["Class"].mean().reset_index()
+sns.lineplot(data=yearly_sucess, x="Date", y="Class", marker="o", color="b")
+plt.xlabel("Date")
+plt.ylabel("Rate sucess")
+plt.ylim(0,1)
+plt.grid(True)
+plt.show()
+
+
+
+#### Feature Engineering ####
+# A estas alturas, debería obtener algunos conocimientos preliminares sobre cómo cada variable
+# importante afectaría la tasa de éxito; seleccionaremos las características que se utilizarán
+# en la predicción del éxito en el módulo futuro.
+features = df[['FlightNumber', 'PayloadMass', 'Orbit', 'LaunchSite', 'Flights', 'GridFins', 'Reused', 'Legs', 'LandingPad', 'Block', 'ReusedCount', 'Serial']]
+features.head()
+
+
+
+### TASK 7: Create dummy variables to categorical columns ###
+# Use the function get_dummies and features dataframe to apply OneHotEncoder to the column
+# Orbits, LaunchSite, LandingPad, and Serial. Assign the value to the variable 
+# features_one_hot, display the results using the method head. Your result dataframe must
+# include all features including the encoded ones.
+
+# Seleccionar las columnas categóricas a codificar
+categorical_columns = ["Orbit", "LaunchSite", "LandingPad", "Serial"]
+
+# Aplicar One-Hot Encoding
+features_one_hot = pd.get_dummies(df, columns=categorical_columns)
+
+# Convertir solo las columnas binarias a enteros (0 y 1), sin afectar otras columnas
+features_one_hot[features_one_hot.select_dtypes(include=['bool']).columns] = features_one_hot.select_dtypes(include=['bool']).astype(int)
+
+# Mostrar los primeros registros
+features_one_hot.head()
+
+
+
+### TASK 8: Cast all numeric columns to float64 ###
+# Now that our features_one_hot dataframe only contains numbers, cast the entire dataframe to
+# variable type float64
+# HINT: use astype function
+
+# Seleccionar solo las columnas numéricas antes de convertirlas
+numeric_columns = features_one_hot.select_dtypes(include=['int64', 'bool', 'float64']).columns
+
+# Convertir las columnas numéricas a float64
+features_one_hot[numeric_columns] = features_one_hot[numeric_columns].astype(float)
+
+# Verificar los tipos de datos
+print(features_one_hot.dtypes)
+
+
+## Lo exportamos a archivo csv ##
+features_one_hot.to_csv('dataset_part_3.csv', index=False)
