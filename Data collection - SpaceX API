@@ -1,0 +1,18 @@
+# Realizaremos una solicitud de obtención usando la biblioteca request para obtener los datos
+# de lanzamiento, que utilizaremos para obtener los datos de la API.
+url = "https://api.spacexdata.com/v4/launches/past"
+import requests
+response = requests.get(url)
+
+# El resultado se puede usando:
+response.json()
+# Nuestra respuesta tendrá una forma de JSON, específicamente una lista de objetos JSON.
+
+
+### Wrangling the data using an API ###
+# Como utilizaremos una API, cuando recibimos una respuesta está en forma de JSON. En concreto, 
+# tenemos una lista de objetos JSON, cada uno de los cuales representa un lanzamiento. Para
+# convertir este JSON en un dataframe, podemos usar
+import pandas as pd
+data = pd.json_normalize(response.json())
+# Ahora veremos los datos en forma de una tabla
